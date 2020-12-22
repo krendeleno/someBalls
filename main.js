@@ -23,7 +23,6 @@ let render = Render.create({
     options: {
         width: w,
         height: h,
-        showVelocity: true,
         wireframes: false,
         hasBounds: true,
         showShadows: true,
@@ -77,12 +76,41 @@ let health = 100;
 let fullHealth = 100;
 let mouseDown = false;
 let gameActive = false;
+
+centerX = - w/2 + 25;
+centerY = - h/2 + 25;
+
+// Отслеживание позиции мышки относительно канваса
+let pageX;
+let pageY;
+
+function handler(e) {
+    pageX = e.clientX;
+    pageY = e.clientY;
+}
+
+document.addEventListener('mousemove', handler);
+
 Events.on(render, 'afterRender', function(event) {
     let ctx = render.context;
+
     if (gameActive) {
         // Фикс очень странных багов со свечением из-за того, что я поменяла рендерер в matter.js
         ctx.shadowColor = 'transparent';
 
+        // Траектория полета
+        if (mouseDown) {
+            var grad= ctx.createLinearGradient(w/2, h/2, pageX, pageY);
+            grad.addColorStop(0, "white");
+            grad.addColorStop(1, "transparent ");
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 6.5;
+            ctx.beginPath();
+            ctx.moveTo(w/2, h/2);
+            ctx.lineTo(pageX, pageY);
+            ctx.stroke();
+            ctx.closePath();
+        }
         // Очки
         ctx.fillStyle = "white";
         ctx.font = "18px 'Press Start 2P', cursive";
@@ -165,7 +193,7 @@ Events.on(engine, "collisionEnd", function(event) {
             var explosion = Emitter.create(event.pairs[0].bodyA.position.x, event.pairs[0].bodyA.position.y, {
                 amount: 20,
                 collisions: false,
-                colors: "purple",
+                colors: ["#B695C0", "purple"],
             });
             explosion.explode();
             World.remove(engine.world, event.pairs[0].bodyA);
@@ -174,19 +202,18 @@ Events.on(engine, "collisionEnd", function(event) {
             var explosion = Emitter.create(event.pairs[0].bodyA.position.x, event.pairs[0].bodyA.position.y, {
                 amount: 20,
                 collisions: false,
-                colors: "purple",
+                colors: ["#B695C0", "purple"],
             });
             explosion.explode();
             World.remove(engine.world, event.pairs[0].bodyB);
         }
+        explosion.explode();
     }
 });
 
 // Границы для камеры
 let initialEngineBoundsMaxX = render.bounds.max.x;
 let initialEngineBoundsMaxY = render.bounds.max.y;
-centerX = - w/2 + 25;
-centerY = - h/2 + 25;
 
 let isDefeat = false;
 let isWin = false;
@@ -297,7 +324,7 @@ function startGame() {
             });
         World.add(engine.world, ball_random);
     }
-// Добавление объектов в мир и запуск движка и тикера
+// Добавление объектов в мир
     World.add(engine.world, [ball, ground, mouseConstraint, lava]);
 }
 
