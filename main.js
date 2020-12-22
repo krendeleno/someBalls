@@ -34,6 +34,8 @@ let Draggable;
 var bodyStyle = {fillStyle: 'white', shadowColor: 'white' };
 var lavaStyle = {fillStyle: 'darkorange', shadowColor: 'darkorange'};
 var ballStyle = {fillStyle: 'purple', shadowColor: 'purple'};
+var badBallStyle = {fillStyle: 'red', shadowColor: 'red'};
+var goodBallStyle = {fillStyle: 'gold', shadowColor: 'gold'};
 
 // Создание объектов
 let ground = Bodies.rectangle(w/2, h, w,10,{isStatic: true, friction: 0.2});
@@ -174,55 +176,65 @@ Events.on(mouseConstraint, "mouseup", function(event) {
 // Плагин для взрывов в matter.js
 var Emitter = Particle.emitter;
 
-// Столкновение
-Events.on(engine, 'collisionStart', function(event) {
-    if (event.pairs[0].bodyB.label !== "Rectangle Body" && event.pairs[0].bodyA.label !== "Rectangle Body"
-    && !event.pairs[0].bodyB.isParticle && !event.pairs[0].bodyA.isParticle) {
-        // Body.setVelocity(ball, {x: ball.velocity.x + 5, y: ball.velocity.y})
-        score++;
-        if (health < 100)
-            health += 5;
-    }
- });
 
 // Взрыв при ударе
 Events.on(engine, "collisionEnd", function(event) {
     if (!event.pairs[0].bodyB.isParticle && !event.pairs[0].bodyA.isParticle) {
-        if (event.pairs[0].bodyB == ball && event.pairs[0].bodyA.label == "Circle Body") {
-            playSound ("ballCollision");
-            var explosion = Emitter.create(event.pairs[0].bodyA.position.x, event.pairs[0].bodyA.position.y, {
-                amount: 20,
-                collisions: false,
-                colors: ["#B695C0", "purple"],
-            });
-            explosion.explode();
-            World.remove(engine.world, event.pairs[0].bodyA);
-            for (i = 0; i < balls.length; i++) {
-                if (event.pairs[0].bodyA.position.x == balls[i].position.x
-                    && event.pairs[0].bodyA.position.y == balls[i].position.y) {
-                    balls.splice(i, 1);
-                    break;
-                }
+        if (event.pairs[0].bodyB == ball) {
+            if (event.pairs[0].bodyA.label == "Circle Body") {
+                score++;
+                if (health < 100)
+                    health += 5;
+                collisionExplosion(event.pairs[0].bodyA);
+
+            } else if (event.pairs[0].bodyA.label == "Bad boy")
+                health = 0;
+            else if (event.pairs[0].bodyA.label == "Good boy") {
+                health = 100;
+                collisionExplosion(event.pairs[0].bodyA);
             }
-        } else if (event.pairs[0].bodyA == ball && event.pairs[0].bodyB.label == "Circle Body") {
-            playSound ("ballCollision");
-            var explosion = Emitter.create(event.pairs[0].bodyA.position.x, event.pairs[0].bodyA.position.y, {
-                amount: 20,
-                collisions: false,
-                colors: ["#B695C0", "purple"],
-            });
-            explosion.explode();
-            World.remove(engine.world, event.pairs[0].bodyB);
-            for (i = 0; i < balls.length; i++) {
-                if (event.pairs[0].bodyB.position.x == balls[i].position.x
-                    && event.pairs[0].bodyB.position.y == balls[i].position.y) {
-                    balls.splice(i, 1);
-                    break;
-                }
+        } else if (event.pairs[0].bodyA == ball) {
+            if (event.pairs[0].bodyB.label == "Circle Body") {
+                score++;
+                if (health < 100)
+                    health += 5;
+                collisionExplosion(event.pairs[0].bodyB);
+            } else if (event.pairs[0].bodyB.label == "Bad boy")
+                health = 0;
+            else if (event.pairs[0].bodyB.label == "Good boy") {
+                health = 100;
+                collisionExplosion(event.pairs[0].bodyB);
             }
         }
     }
 });
+
+function collisionExplosion(body) {
+    playSound ("ballCollision");
+
+    var explosion = Emitter.create(body.position.x, body.position.y, {
+        amount: 25,
+        collisions: false,
+        colors: body.render.fillStyle,
+    });
+    explosion.explode();
+
+    for (i = 0; i < balls.length; i++) {
+        if (body.position.x == balls[i].position.x
+            && body.position.y == balls[i].position.y) {
+            balls.splice(i, 1);
+            break;
+        }
+    }
+    for (i = 0; i < goodBalls.length; i++) {
+        if (body.position.x == goodBalls[i].position.x
+            && body.position.y == goodBalls[i].position.y) {
+            goodBalls.splice(i, 1);
+            break;
+        }
+    }
+    World.remove(engine.world, body);
+}
 
 // Границы для камеры
 let initialEngineBoundsMaxX = render.bounds.max.x;
@@ -252,7 +264,7 @@ Events.on(engine, 'beforeUpdate', function(event) {
 
     // Уменьшение здоровья
     if (mouseDown && health > 0)
-        health -= 0.2;
+        health -= 0.3;
 
     // Сообщение о победе
     if (score == 30 && !wasPlayed) {
@@ -333,10 +345,13 @@ function addRetry() {
     // document.body.innerHTML +=
     //     "<button id='play' onclick='startGame()'>Еще раз?</button>";
 }
-
+badBalls = [];
 balls = [];
+goodBalls = [];
 function startGame() {
+    goodBalls = [];
     balls = [];
+    badBalls = [];
     World.clear(engine.world);
     isDefeat = false;
     isWin = false;
@@ -355,9 +370,28 @@ function startGame() {
                 render: ballStyle,
             });
         balls.push(ball_random);
-        console.log("+1")
+    }
+    for (i = 0; i < 15; i++) {
+        let ball_random = Bodies.circle(getRandomArbitrary(-w * 2, w * 2),
+            getRandomArbitrary(-h * 2, h), 25, {
+                isStatic: true,
+                label: "Bad boy",
+                render: badBallStyle,
+            });
+        badBalls.push(ball_random);
+    }
+    for (i = 0; i < 3; i++) {
+        let ball_random = Bodies.circle(getRandomArbitrary(-w * 2, w * 2),
+            getRandomArbitrary(-h * 2, h), 10, {
+                isStatic: true,
+                label: "Good boy",
+                render: goodBallStyle,
+            });
+        goodBalls.push(ball_random);
     }
     World.add(engine.world, balls);
+    World.add(engine.world, badBalls);
+    World.add(engine.world, goodBalls);
 // Добавление объектов в мир
     Body.setPosition(ball, {x: 0, y: 0});
     Body.setVelocity(ball, {x: getRandomArbitrary(0, 20), y: getRandomArbitrary(-20,20)})
@@ -376,17 +410,29 @@ function miniMap() {
     var yOff = 150;
     var size = 200;
     var scale = size / (w * 3);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.rect(xOff - 50, yOff - 100, -size -100, size - 50);
-    ctx.stroke();
-    ctx.fill();
+    // ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    // ctx.rect(xOff - 50, yOff - 100, -size -100, size - 50);
+    // ctx.stroke();
+    // ctx.fill();
     //draw dot for masses
     ctx.fillStyle = "purple";
     for (var i = 0; i < balls.length; i++) {
         ctx.fillRect(balls[i].position.x * scale + xOff - size, balls[i].position.y * scale + yOff, 3, 3);
     }
+    ctx.fillStyle = "red";
+    for (var i = 0; i < badBalls.length; i++) {
+        ctx.fillRect(badBalls[i].position.x * scale + xOff - size, badBalls[i].position.y * scale + yOff, 3, 3);
+    }
+
+    ctx.fillStyle = "gold";
+    for (var i = 0; i < goodBalls.length; i++) {
+        ctx.fillRect(goodBalls[i].position.x * scale + xOff - size, goodBalls[i].position.y * scale + yOff, 3, 3);
+    }
+
     //draw player's dot
     ctx.fillStyle = "white";
-    ctx.fillRect(ball.position.x * scale + xOff - size, ball.position.y * scale + yOff, 5, 5);
+    let PlayerX = ball.position.x * scale + xOff - size;
+    let PlayerY = ball.position.y * scale + yOff;
+    ctx.fillRect(PlayerX, PlayerY, 5, 5);
     ctx.closePath();
 }
