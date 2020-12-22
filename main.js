@@ -90,13 +90,13 @@ function handler(e) {
 }
 
 document.addEventListener('mousemove', handler);
-
+let ctx = render.context;
 Events.on(render, 'afterRender', function(event) {
-    let ctx = render.context;
     // Фикс очень странных багов со свечением из-за того, что я поменяла рендерер в matter.js
         ctx.shadowColor = 'transparent';
 
     if (gameActive) {
+        miniMap();
         // Траектория полета
         if (mouseDown) {
             var grad= ctx.createLinearGradient(w/2, h/2, pageX, pageY);
@@ -126,6 +126,7 @@ Events.on(render, 'afterRender', function(event) {
 
     if (isWin) {
         text = "Победа!";
+        ctx.fillStyle = "green";
         ctx.font = "30px 'Press Start 2P', cursive";
         ctx.fillText(text , w/2 - ctx.measureText(text).width/2, h/2);
     }
@@ -196,6 +197,13 @@ Events.on(engine, "collisionEnd", function(event) {
             });
             explosion.explode();
             World.remove(engine.world, event.pairs[0].bodyA);
+            for (i = 0; i < balls.length; i++) {
+                if (event.pairs[0].bodyA.position.x == balls[i].position.x
+                    && event.pairs[0].bodyA.position.y == balls[i].position.y) {
+                    balls.splice(i, 1);
+                    break;
+                }
+            }
         } else if (event.pairs[0].bodyA == ball && event.pairs[0].bodyB.label == "Circle Body") {
             playSound ("ballCollision");
             var explosion = Emitter.create(event.pairs[0].bodyA.position.x, event.pairs[0].bodyA.position.y, {
@@ -205,6 +213,13 @@ Events.on(engine, "collisionEnd", function(event) {
             });
             explosion.explode();
             World.remove(engine.world, event.pairs[0].bodyB);
+            for (i = 0; i < balls.length; i++) {
+                if (event.pairs[0].bodyB.position.x == balls[i].position.x
+                    && event.pairs[0].bodyB.position.y == balls[i].position.y) {
+                    balls.splice(i, 1);
+                    break;
+                }
+            }
         }
     }
 });
@@ -223,7 +238,6 @@ let wasPlayed = false;
 Events.on(engine, 'beforeUpdate', function(event) {
     // Следовать за игроком по Х
     render.bounds.min.x = centerX + ball.bounds.min.x;
-    console.log(render.bounds.min.x)
     render.bounds.max.x = centerX + ball.bounds.min.x + initialEngineBoundsMaxX;
 
     // Следовать за игроком по Y
@@ -320,7 +334,9 @@ function addRetry() {
     //     "<button id='play' onclick='startGame()'>Еще раз?</button>";
 }
 
+balls = [];
 function startGame() {
+    balls = [];
     World.clear(engine.world);
     isDefeat = false;
     isWin = false;
@@ -338,8 +354,10 @@ function startGame() {
                 isStatic: true,
                 render: ballStyle,
             });
-        World.add(engine.world, ball_random);
+        balls.push(ball_random);
+        console.log("+1")
     }
+    World.add(engine.world, balls);
 // Добавление объектов в мир
     Body.setPosition(ball, {x: 0, y: 0});
     Body.setVelocity(ball, {x: getRandomArbitrary(0, 20), y: getRandomArbitrary(-20,20)})
@@ -348,3 +366,27 @@ function startGame() {
 
 Render.run(render);
 Engine.run(engine);
+
+// Мини-карта
+function miniMap() {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "grey";
+    ctx.beginPath();
+    var xOff = w - 10;
+    var yOff = 150;
+    var size = 200;
+    var scale = size / (w * 3);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.rect(xOff - 50, yOff - 100, -size -100, size - 50);
+    ctx.stroke();
+    ctx.fill();
+    //draw dot for masses
+    ctx.fillStyle = "purple";
+    for (var i = 0; i < balls.length; i++) {
+        ctx.fillRect(balls[i].position.x * scale + xOff - size, balls[i].position.y * scale + yOff, 3, 3);
+    }
+    //draw player's dot
+    ctx.fillStyle = "white";
+    ctx.fillRect(ball.position.x * scale + xOff - size, ball.position.y * scale + yOff, 5, 5);
+    ctx.closePath();
+}
