@@ -93,11 +93,10 @@ document.addEventListener('mousemove', handler);
 
 Events.on(render, 'afterRender', function(event) {
     let ctx = render.context;
-
-    if (gameActive) {
-        // Фикс очень странных багов со свечением из-за того, что я поменяла рендерер в matter.js
+    // Фикс очень странных багов со свечением из-за того, что я поменяла рендерер в matter.js
         ctx.shadowColor = 'transparent';
 
+    if (gameActive) {
         // Траектория полета
         if (mouseDown) {
             var grad= ctx.createLinearGradient(w/2, h/2, pageX, pageY);
@@ -117,7 +116,7 @@ Events.on(render, 'afterRender', function(event) {
         ctx.fillText("Ваши очки: " + score, 50, 50);
 
         // Здоровье
-        ctx.fillStyle = "red";
+        ctx.fillStyle = "darkred";
         ctx.beginPath();
         ctx.fillRect(w / 2 - fullHealth, 20, fullHealth * 2, 30);
         ctx.fillStyle = "green";
@@ -157,7 +156,7 @@ Events.on(mouseConstraint, "mouseup", function(event) {
     let y = event.mouse.position.y - ball.position.y;
     let d = Math.sqrt(x * x + y * y);
 
-    // Новые координаты вектора скорости с сохранением длины
+    // Новые координаты вектора скорости
     //  x = x * dV / d;
     //  y = y * dV / d;
       x = x / 50;
@@ -207,7 +206,6 @@ Events.on(engine, "collisionEnd", function(event) {
             explosion.explode();
             World.remove(engine.world, event.pairs[0].bodyB);
         }
-        explosion.explode();
     }
 });
 
@@ -218,13 +216,14 @@ let initialEngineBoundsMaxY = render.bounds.max.y;
 let isDefeat = false;
 let isWin = false;
 
-// Переменная, чтобы звук проигрыша не проигрывался миллион раз
+// Переменная, чтобы звук победы/поражения не проигрывался миллион раз
 let wasPlayed = false;
 
 // Камера
 Events.on(engine, 'beforeUpdate', function(event) {
     // Следовать за игроком по Х
     render.bounds.min.x = centerX + ball.bounds.min.x;
+    console.log(render.bounds.min.x)
     render.bounds.max.x = centerX + ball.bounds.min.x + initialEngineBoundsMaxX;
 
     // Следовать за игроком по Y
@@ -239,7 +238,7 @@ Events.on(engine, 'beforeUpdate', function(event) {
 
     // Уменьшение здоровья
     if (mouseDown && health > 0)
-        health -= 0.3;
+        health -= 0.2;
 
     // Сообщение о победе
     if (score == 30 && !wasPlayed) {
@@ -270,13 +269,11 @@ function ballExplosion() {
     explosion.explode();
     World.remove(engine.world, ball);
     setTimeout(() => {
-            Matter.Render.stop(render);
-            gameActive = false;},
+            // Matter.Render.stop(render);
+            gameActive = false;
+            addRetry();},
         1000);
-};
-
-// Начальная скорость
-Body.setVelocity( ball, {x: 20, y: 10});
+}
 
 // Генерация шариков с нормальным распределением
 function getRandomArbitrary(min, max) {
@@ -311,8 +308,27 @@ function addCircleUp() {
     World.add(engine.world, ball_random);
 }
 
+function addRetry() {
+    var foo = document.getElementsByTagName("canvas")[0];
+    var parent = foo.parentNode;
+    var helper = document.createElement('div');
+    helper.innerHTML = "<button id='play' onclick='startGame()'>Еще раз?</button>";
+    while (helper.firstChild) {
+        parent.insertBefore(helper.firstChild, foo);
+    }
+    // document.body.innerHTML +=
+    //     "<button id='play' onclick='startGame()'>Еще раз?</button>";
+}
+
 function startGame() {
-   gameActive = true;
+    World.clear(engine.world);
+    isDefeat = false;
+    isWin = false;
+    health = 100;
+    score = 0;
+// Переменная, чтобы звук победы/поражения не проигрывался миллион раз
+    wasPlayed = false;
+    gameActive = true;
     var element = document.getElementById("play");
     element.parentNode.removeChild(element);
 // Генерация шариков один раз
@@ -325,6 +341,8 @@ function startGame() {
         World.add(engine.world, ball_random);
     }
 // Добавление объектов в мир
+    Body.setPosition(ball, {x: 0, y: 0});
+    Body.setVelocity(ball, {x: getRandomArbitrary(0, 20), y: getRandomArbitrary(-20,20)})
     World.add(engine.world, [ball, ground, mouseConstraint, lava]);
 }
 

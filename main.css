@@ -24,12 +24,17 @@ body {
     font-size: 3vw;
 }
 
-#play_btn {
+#play_btn, button#play{
+    border: none;
     font-family: 'Press Start 2P', cursive;
     font-size: 1.3vw;
     cursor: pointer;
     height: 6vh;
     width: 18vw;
+}
+
+button#play {
+    top: 8vw !important;
 }
 
 
