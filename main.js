@@ -62,9 +62,9 @@ render.mouse = mouse;
 
 // Звуки
 function loadSound () {
-    createjs.Sound.registerSound("ballCollision.mp3", "ballCollision");
-    createjs.Sound.registerSound("destruction.mp3", "destruction");
-    createjs.Sound.registerSound("win.mp3", "win");
+    createjs.Sound.registerSound("music/ballCollision.mp3", "ballCollision");
+    createjs.Sound.registerSound("music/destruction.mp3", "destruction");
+    createjs.Sound.registerSound("music/win.mp3", "win");
 }
 
 function playSound (sound) {
