@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Balls</title>
+    <link rel="stylesheet" href="main.css"/>
+    <script type="application/javascript" src="libraries/matter.js"></script>
+    <script type="application/javascript" src="libraries/Matter-Particles.js"></script>
+    <script type="application/javascript" src="matter-attractors.js"></script>
+
+</head>
+<body onload="loadSound();">
+    <div id="play">
+        <p>Some Balls</p>
+        <button onclick="startGame()" id="play_btn">Начать игру</button>
+    </div>
+    <!--
+    скрипт в конце, чтобы быть уверенными, что он выполнится после
+    загрузки страницы
+    -->
+    <script src="https://code.createjs.com/1.0.0/soundjs.min.js"></script>
+    <script type="application/javascript" src="main.js"></script>
+</body>
+</html>
