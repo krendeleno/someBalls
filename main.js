@@ -1,4 +1,4 @@
-// Matter module aliases
+// Модули matter.js
 var Engine          = Matter.Engine,
     Render          = Matter.Render,
     World           = Matter.World,
@@ -44,6 +44,18 @@ let ball = Bodies.circle(0,0,20, {
     isStatic: false,
     restitution: 1,
     render: bodyStyle,
+    plugin: {
+        wrap: {
+            min: {
+                x: - w * 2,
+                y: -h * 10
+            },
+            max: {
+                x: w * 2,
+                y: h + 80
+            }
+        }
+    }
 });
 
 // Мышка
@@ -95,12 +107,12 @@ document.addEventListener('mousemove', handler);
 let ctx = render.context;
 Events.on(render, 'afterRender', function(event) {
     // Фикс очень странных багов со свечением из-за того, что я поменяла рендерер в matter.js
-        ctx.shadowColor = 'transparent';
+    ctx.shadowColor = 'transparent';
 
-    if (gameActive) {
+    if (gameActive || isDefeat || isWin) {
         miniMap();
         // Траектория полета
-        if (mouseDown) {
+        if (mouseDown && !wasPlayed) {
             var grad= ctx.createLinearGradient(w/2, h/2, pageX, pageY);
             grad.addColorStop(0, "white");
             grad.addColorStop(1, "transparent ");
@@ -134,6 +146,7 @@ Events.on(render, 'afterRender', function(event) {
     }
 
     if (isDefeat) {
+        health = 0;
         text = "Вы проиграли!";
         ctx.fillStyle = "red";
         ctx.font = "30px 'Press Start 2P', cursive";
@@ -143,7 +156,7 @@ Events.on(render, 'afterRender', function(event) {
 
  // Слоу-моу при клике
 Events.on(mouseConstraint, "mousedown", function(event) {
-    if (gameActive) {
+    if (gameActive && !wasPlayed) {
         engine.timing.timeScale = 0.2;
         mouseDown = true;
     }
@@ -173,9 +186,9 @@ Events.on(mouseConstraint, "mouseup", function(event) {
     mouseDown = false;
 });
 
-// Плагин для взрывов в matter.js
+// Плагины matter.js
 var Emitter = Particle.emitter;
-
+Matter.use('matter-wrap');
 
 // Взрыв при ударе
 Events.on(engine, "collisionEnd", function(event) {
@@ -211,14 +224,12 @@ Events.on(engine, "collisionEnd", function(event) {
 
 function collisionExplosion(body) {
     playSound ("ballCollision");
-
     var explosion = Emitter.create(body.position.x, body.position.y, {
         amount: 25,
         collisions: false,
         colors: body.render.fillStyle,
     });
     explosion.explode();
-
     for (i = 0; i < balls.length; i++) {
         if (body.position.x == balls[i].position.x
             && body.position.y == balls[i].position.y) {
@@ -263,7 +274,7 @@ Events.on(engine, 'beforeUpdate', function(event) {
     //     {x: (render.bounds.max.x - render.bounds.min.x)/2, y: (render.bounds.max.y - render.bounds.min.y)/2});
 
     // Уменьшение здоровья
-    if (mouseDown && health > 0)
+    if (mouseDown && health > 0 && !wasPlayed)
         health -= 0.3;
 
     // Сообщение о победе
@@ -294,11 +305,8 @@ function ballExplosion() {
     });
     explosion.explode();
     World.remove(engine.world, ball);
-    setTimeout(() => {
-            // Matter.Render.stop(render);
-            gameActive = false;
-            addRetry();},
-        1000);
+    gameActive = false;
+    addRetry();
 }
 
 // Генерация шариков с нормальным распределением
@@ -334,16 +342,27 @@ function addCircleUp() {
     World.add(engine.world, ball_random);
 }
 
+function checkPosition(body) {
+    for (let i = 0; i < balls.length; i++)
+        if (Math.abs(body.position.x - balls[i].position.x) < 60 && Math.abs(body.position.y - balls[i].position.y) < 120)
+            return false;
+    for (let i = 0; i < badBalls.length; i++)
+        if (Math.abs(body.position.x - badBalls[i].position.x) < 60 && Math.abs(body.position.y - balls[i].position.y) < 120)
+            return false;
+    for (let i = 0; i < goodBalls.length; i++)
+        if (Math.abs(body.position.x - goodBalls[i].position.x) < 60 && Math.abs(body.position.y - balls[i].position.y) < 120)
+            return false;
+    return true;
+}
+
 function addRetry() {
-    var foo = document.getElementsByTagName("canvas")[0];
-    var parent = foo.parentNode;
+    var canvas = document.getElementsByTagName("canvas")[0];
+    var parent = canvas.parentNode;
     var helper = document.createElement('div');
     helper.innerHTML = "<button id='play' onclick='startGame()'>Еще раз?</button>";
     while (helper.firstChild) {
-        parent.insertBefore(helper.firstChild, foo);
+        parent.insertBefore(helper.firstChild, canvas);
     }
-    // document.body.innerHTML +=
-    //     "<button id='play' onclick='startGame()'>Еще раз?</button>";
 }
 badBalls = [];
 balls = [];
@@ -357,7 +376,6 @@ function startGame() {
     isWin = false;
     health = 100;
     score = 0;
-// Переменная, чтобы звук победы/поражения не проигрывался миллион раз
     wasPlayed = false;
     gameActive = true;
     var element = document.getElementById("play");
@@ -369,16 +387,28 @@ function startGame() {
                 isStatic: true,
                 render: ballStyle,
             });
-        balls.push(ball_random);
+        if (checkPosition(ball_random))
+            balls.push(ball_random);
+        else {
+            Body.setPosition(ball_random, {x: getRandomArbitrary(-w * 2, w * 2),
+                y: getRandomArbitrary(-h * 2, h)});
+            balls.push(ball_random);
+        }
     }
     for (i = 0; i < 15; i++) {
-        let ball_random = Bodies.circle(getRandomArbitrary(-w * 2, w * 2),
-            getRandomArbitrary(-h * 2, h), 25, {
+        let ball_random = Bodies.polygon(getRandomArbitrary(-w * 2, w * 2),
+            getRandomArbitrary(-h * 2, h), 6, 30, {
                 isStatic: true,
                 label: "Bad boy",
                 render: badBallStyle,
             });
-        badBalls.push(ball_random);
+        if (checkPosition(ball_random))
+            badBalls.push(ball_random);
+        else {
+            Body.setPosition(ball_random, {x: getRandomArbitrary(-w * 2, w * 2),
+                y: getRandomArbitrary(-h * 2, h)});
+            badBalls.push(ball_random);
+        }
     }
     for (i = 0; i < 3; i++) {
         let ball_random = Bodies.circle(getRandomArbitrary(-w * 2, w * 2),
@@ -387,7 +417,13 @@ function startGame() {
                 label: "Good boy",
                 render: goodBallStyle,
             });
-        goodBalls.push(ball_random);
+        if (checkPosition(ball_random))
+            goodBalls.push(ball_random);
+        else {
+            Body.setPosition(ball_random, {x: getRandomArbitrary(-w * 2, w * 2),
+                y: getRandomArbitrary(-h * 2, h)});
+            goodBalls.push(ball_random);
+        }
     }
     World.add(engine.world, balls);
     World.add(engine.world, badBalls);
@@ -410,11 +446,12 @@ function miniMap() {
     var yOff = 150;
     var size = 200;
     var scale = size / (w * 3);
-    // ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    // ctx.rect(xOff - 50, yOff - 100, -size -100, size - 50);
-    // ctx.stroke();
-    // ctx.fill();
-    //draw dot for masses
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.rect(xOff - 50, yOff - 100, -size -100, size - 50);
+    ctx.stroke();
+    ctx.fill();
+
+    // Шарики на мини-карте
     ctx.fillStyle = "purple";
     for (var i = 0; i < balls.length; i++) {
         ctx.fillRect(balls[i].position.x * scale + xOff - size, balls[i].position.y * scale + yOff, 3, 3);
@@ -429,10 +466,11 @@ function miniMap() {
         ctx.fillRect(goodBalls[i].position.x * scale + xOff - size, goodBalls[i].position.y * scale + yOff, 3, 3);
     }
 
-    //draw player's dot
+    // Игрок на мини-карте
     ctx.fillStyle = "white";
     let PlayerX = ball.position.x * scale + xOff - size;
     let PlayerY = ball.position.y * scale + yOff;
-    ctx.fillRect(PlayerX, PlayerY, 5, 5);
+    if (PlayerY > yOff - 100)
+        ctx.fillRect(PlayerX, PlayerY, 5, 5);
     ctx.closePath();
 }
