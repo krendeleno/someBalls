@@ -47,11 +47,11 @@ let ball = Bodies.circle(0,0,20, {
     plugin: {
         wrap: {
             min: {
-                x: - w * 2,
+                x: - w * 2.2,
                 y: -h * 10
             },
             max: {
-                x: w * 2,
+                x: w * 2.2,
                 y: h + 80
             }
         }
@@ -278,7 +278,7 @@ Events.on(engine, 'beforeUpdate', function(event) {
         health -= 0.3;
 
     // Сообщение о победе
-    if (score == 30 && !wasPlayed) {
+    if (score == amountBalls && !wasPlayed) {
         isWin = true;
         ballExplosion();
         playSound("win");
@@ -314,34 +314,6 @@ function getRandomArbitrary(min, max) {
     return Math.random() * (max - min) + min;
 }
 
-// Генерация шариков в режиме реального времени
-function addCircleLeft() {
-    let ball_random =  Bodies.circle(getRandomArbitrary(render.bounds.max.x, render.bounds.max.x * 2),
-        getRandomArbitrary(-1000, 600), 60, {
-            isStatic: true,
-            render: bodyStyle,
-        });
-    World.add(engine.world, ball_random);
-}
-
-function addCircleRight(){
-    let ball_random =  Bodies.circle(getRandomArbitrary(- w * 2, 0),
-        getRandomArbitrary(-1000, 600), 60, {
-            isStatic: true,
-            render: bodyStyle,
-        });
-    World.add(engine.world, ball_random);
-}
-
-function addCircleUp() {
-    let ball_random =  Bodies.circle(getRandomArbitrary(render.bounds.min.x * 2, render.bounds.max.x * 2),
-        getRandomArbitrary(-2000, -1000), 60, {
-            isStatic: true,
-            render: bodyStyle,
-        });
-    World.add(engine.world, ball_random);
-}
-
 function checkPosition(body) {
     for (let i = 0; i < balls.length; i++)
         if (Math.abs(body.position.x - balls[i].position.x) < 60 && Math.abs(body.position.y - balls[i].position.y) < 120)
@@ -367,6 +339,10 @@ function addRetry() {
 badBalls = [];
 balls = [];
 goodBalls = [];
+
+let amountBalls;
+let amountBadBalls;
+let amountGoodBalls;
 function startGame() {
     goodBalls = [];
     balls = [];
@@ -380,8 +356,12 @@ function startGame() {
     gameActive = true;
     var element = document.getElementById("play");
     element.parentNode.removeChild(element);
+
 // Генерация шариков один раз
-    for (i = 0; i < 30; i++) {
+    amountBalls = Math.floor(getRandomArbitrary(10,50));
+    amountBadBalls = Math.floor(getRandomArbitrary(10,20));
+    amountGoodBalls = Math.floor(getRandomArbitrary(1,5));
+    for (i = 0; i < amountBalls; i++) {
         let ball_random = Bodies.circle(getRandomArbitrary(-w * 2, w * 2),
             getRandomArbitrary(-h * 2, h), 25, {
                 isStatic: true,
@@ -395,7 +375,9 @@ function startGame() {
             balls.push(ball_random);
         }
     }
-    for (i = 0; i < 15; i++) {
+    console.log(balls.length)
+    console.log(amountBalls)
+    for (i = 0; i < amountBadBalls; i++) {
         let ball_random = Bodies.polygon(getRandomArbitrary(-w * 2, w * 2),
             getRandomArbitrary(-h * 2, h), 6, 30, {
                 isStatic: true,
@@ -410,7 +392,7 @@ function startGame() {
             badBalls.push(ball_random);
         }
     }
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < amountGoodBalls; i++) {
         let ball_random = Bodies.circle(getRandomArbitrary(-w * 2, w * 2),
             getRandomArbitrary(-h * 2, h), 10, {
                 isStatic: true,
