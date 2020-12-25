@@ -375,8 +375,7 @@ function startGame() {
             balls.push(ball_random);
         }
     }
-    console.log(balls.length)
-    console.log(amountBalls)
+
     for (i = 0; i < amountBadBalls; i++) {
         let ball_random = Bodies.polygon(getRandomArbitrary(-w * 2, w * 2),
             getRandomArbitrary(-h * 2, h), 6, 30, {
