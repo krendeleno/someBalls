@@ -80,7 +80,7 @@ Counter.prototype.send = function(name, value) {
         	self.sendBatchRequest();
         }, COUNTERS_BATCH_TIMEOUT);
     } else {
-        sendBatchRequest();
+		self.sendBatchRequest();
     }
 };
 

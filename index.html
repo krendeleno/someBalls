@@ -12,7 +12,7 @@
 <body onload="loadSound();">
     <div id="play">
         <p>Some Balls</p>
-        <button onclick="startGame()" id="play_btn">Начать игру</button>
+        <button onclick="startGame();" id="play_btn">Начать игру</button>
     </div>
     <script src="https://code.createjs.com/1.0.0/soundjs.min.js"></script>
     <script type="application/javascript" src="main.js"></script>
@@ -39,13 +39,43 @@
             counter.send(name, delta)
         }
 
-        function calculateFont() {
+
+        function calculateFPS(duration) {
+            let times = [];
+            let fps;
+            let allFPS = [];
+            let fpsCalculation = true;
+            refreshLoop();
+            function refreshLoop() {
+                window.requestAnimationFrame(function() {
+                    const now = performance.now();
+                    while (times.length > 0 && times[0] <= now - 1000) {
+                        times.shift();
+                    }
+                    times.push(now);
+                    fps = times.length;
+                    allFPS.push(fps);
+                    if (fpsCalculation)
+                        refreshLoop();
+                });
+            }
+            setTimeout(() => {
+                let avgFPS = allFPS.slice(60).reduce((a, b) => a + b) / (allFPS.length - 60);
+                counter.send('averageFPS', avgFPS);
+                fpsCalculation = false;
+            }, duration)
+        }
+
+        document.querySelector('#play_btn'). addEventListener('click', ()=>{
+            calculateFPS(2000);
+        })
+
+        function calculateResources() {
             let performance = window.performance;
             const resourceFont = performance.getEntriesByName('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
             counter.send('fontLoad', resourceFont[0].duration)
         }
-
-        calculateFont();
+        calculateResources();
 
     </script>
 </body>
