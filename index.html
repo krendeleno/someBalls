@@ -14,11 +14,39 @@
         <p>Some Balls</p>
         <button onclick="startGame()" id="play_btn">Начать игру</button>
     </div>
-    <!--
-    скрипт в конце, чтобы быть уверенными, что он выполнится после
-    загрузки страницы
-    -->
     <script src="https://code.createjs.com/1.0.0/soundjs.min.js"></script>
     <script type="application/javascript" src="main.js"></script>
+    <script src="send.js"></script>
+    <script type="module">
+        import {getFID, getFCP} from 'https://unpkg.com/web-vitals?module';
+        let counter = new Counter();
+
+        counter.init('92253787-248B-4240-92E6-04B49FFD0C84', String(Math.random()).substr(2, 12), 'send test');
+        counter.setAdditionalParams({
+        	env: 'production',
+        	platform: /Mobi/i.test(window.navigator.userAgent)? 'touch' : 'desktop',
+        	browser: navigator.userAgent,
+        	system: navigator.appVersion
+        });
+
+        counter.send('connect', performance.timing.connectEnd - performance.timing.connectStart);
+        counter.send('ttfb', performance.timing.responseEnd - performance.timing.requestStart);
+
+        getFID(sendCounter);
+        getFCP(sendCounter);
+
+        function sendCounter({name, delta}) {
+            counter.send(name, delta)
+        }
+
+        function calculateFont() {
+            let performance = window.performance;
+            const resourceFont = performance.getEntriesByName('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+            counter.send('fontLoad', resourceFont[0].duration)
+        }
+
+        calculateFont();
+
+    </script>
 </body>
 </html>
